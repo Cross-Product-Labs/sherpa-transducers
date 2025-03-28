@@ -35,13 +35,11 @@ cargo add sherpa-transducers
 And use it:
 
 ```rust
-use sherpa_transducers::Transducer;
+use sherpa_transducers::{models::*, Transducer};
 
 async fn my_stream_handler() -> anyhow::Result<()> {
-    let mut config = Transducer::quickload(".", models::ZIPFORMER_EN_2023_06_21_ENG).await?;
-
-    let t = config.num_threads(2).build()?;
-
+    let mut cfg = Transducer::quickload(".", ZIPFORMER_EN_2023_06_21_ENG).await?;
+    let t = cfg.num_threads(2).build()?;
     let s = t.phased_stream(1)?;
 
     loop {
@@ -55,8 +53,8 @@ async fn my_stream_handler() -> anyhow::Result<()> {
         // actually do the decode
         s.decode();
 
-        // the transcript may be retroactively modified if internal beam search re-arranges things,
-        // so don't depend on a prefix staying the same until s.reset() is called.
+        // transcript may be retroactively modified if beam search re-arranges things,
+        // so don't depend on prefix staying the same until s.reset() is called.
         let (epoch, transcript) = s.state()?;
 
         if transcript.contains("DELETE THIS") {
