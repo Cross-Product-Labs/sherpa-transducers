@@ -38,14 +38,14 @@ And use it:
 use sherpa_transducers::{models::*, Transducer};
 
 async fn my_stream_handler() -> anyhow::Result<()> {
-    let cfg = Transducer::quickload(".", ZIPFORMER_EN_2023_06_21).await?;
+    let cfg = Transducer::quickload(".", ZIPFORMER_EN_2023_06_21_320MS).await?;
     let t = cfg.num_threads(2).build()?;
     let mut s = t.phased_stream(1)?;
 
     loop {
         // use the sample rate of _your_ audio, input will be resampled automatically
         let sample_rate = 24_000;
-        let audio_samples = vec![0.0f32; 512];
+        let audio_samples = vec![0.; 512];
 
         // buffer some samples to be decoded
         s.accept_waveform(sample_rate, &audio_samples);
