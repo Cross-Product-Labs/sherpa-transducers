@@ -18,9 +18,7 @@ pub mod models;
 pub struct TransducerConfig {
     sample_rate: i32,
     feature_dim: i32,
-    encoder: String,
-    decoder: String,
-    joiner: String,
+    load: Model,
     tokens: String,
     num_threads: i32,
     provider: String,
@@ -33,15 +31,63 @@ pub struct TransducerConfig {
     rule3_min_utterance_length: f32,
 }
 
+#[derive(Clone)]
+enum Model {
+    Transducer {
+        encoder: String,
+        decoder: String,
+        joiner: String,
+    },
+
+    Paraformer {
+        encoder: String,
+        decoder: String,
+    },
+
+    Zip2Ctc {
+        model: String,
+    },
+}
+
 impl TransducerConfig {
-    /// Make a new [TransducerConfig] with reasonable defaults.
-    pub fn new(encoder: &str, decoder: &str, joiner: &str, tokens: &str) -> Self {
+    /// Make a new [TransducerConfig] for a transducer model with reasonable defaults.
+    pub fn transducer(encoder: &str, decoder: &str, joiner: &str, tokens: &str) -> Self {
+        Self::new(
+            Model::Transducer {
+                encoder: encoder.into(),
+                decoder: decoder.into(),
+                joiner: joiner.into(),
+            },
+            tokens,
+        )
+    }
+
+    /// Make a new [TransducerConfig] for a paraformer model with reasonable defaults.
+    pub fn paraformer(encoder: &str, decoder: &str, tokens: &str) -> Self {
+        Self::new(
+            Model::Paraformer {
+                encoder: encoder.into(),
+                decoder: decoder.into(),
+            },
+            tokens,
+        )
+    }
+
+    /// Make a new [TransducerConfig] for a zipformer2 ctc model with reasonable defaults.
+    pub fn zipformer2_ctc(model: &str, tokens: &str) -> Self {
+        Self::new(
+            Model::Zip2Ctc {
+                model: model.into(),
+            },
+            tokens,
+        )
+    }
+
+    fn new(load: Model, tokens: &str) -> Self {
         Self {
             sample_rate: 16000,
             feature_dim: 80,
-            encoder: encoder.into(),
-            decoder: decoder.into(),
-            joiner: joiner.into(),
+            load,
             tokens: tokens.into(),
             num_threads: num_cpus::get_physical().min(8) as i32,
             provider: "cpu".into(),
@@ -153,9 +199,27 @@ impl TransducerConfig {
         config.feat_config.sample_rate = self.sample_rate;
         config.feat_config.feature_dim = self.feature_dim;
 
-        config.model_config.transducer.encoder = track_cstr(dcs, &self.encoder);
-        config.model_config.transducer.decoder = track_cstr(dcs, &self.decoder);
-        config.model_config.transducer.joiner = track_cstr(dcs, &self.joiner);
+        match self.load {
+            Model::Transducer {
+                encoder,
+                decoder,
+                joiner,
+            } => {
+                config.model_config.transducer.encoder = track_cstr(dcs, &encoder);
+                config.model_config.transducer.decoder = track_cstr(dcs, &decoder);
+                config.model_config.transducer.joiner = track_cstr(dcs, &joiner);
+            }
+
+            Model::Paraformer { encoder, decoder } => {
+                config.model_config.paraformer.encoder = track_cstr(dcs, &encoder);
+                config.model_config.paraformer.decoder = track_cstr(dcs, &decoder);
+            }
+
+            Model::Zip2Ctc { model } => {
+                config.model_config.zipformer2_ctc.model = track_cstr(dcs, &model);
+            }
+        }
+
         config.model_config.tokens = track_cstr(dcs, &self.tokens);
         config.model_config.num_threads = self.num_threads;
         config.model_config.provider = track_cstr(dcs, &self.provider);
@@ -250,26 +314,43 @@ pub struct Transducer {
 }
 
 impl Transducer {
-    /// Download a defined model spec to `dir` and make a [TransducerConfig] that will load it.
+    /// Download a defined [models::Spec] to `dir` and make a [TransducerConfig] that will load it.
     #[cfg(feature = "download-models")]
-    pub async fn quickload<P>(dir: P, model: models::TransducerSpec<'_>) -> Result<TransducerConfig>
+    pub async fn quickload<P>(dir: P, spec: models::Spec<'_>) -> Result<TransducerConfig>
     where
         P: AsRef<std::path::Path>,
     {
         let cache_dir = dir.as_ref();
 
-        let arch_path = cache_dir.join(model.name);
+        let arch_path = cache_dir.join(spec.name);
 
         let mut onnx_path = arch_path.clone();
         onnx_path.set_extension("");
         onnx_path.set_extension("");
 
-        let config = Self::config(
-            onnx_path.join(model.encoder).to_str().unwrap(),
-            onnx_path.join(model.decoder).to_str().unwrap(),
-            onnx_path.join(model.joiner).to_str().unwrap(),
-            onnx_path.join(model.tokens).to_str().unwrap(),
-        );
+        let config = match spec.load {
+            models::Model::Transducer {
+                encoder,
+                decoder,
+                joiner,
+            } => TransducerConfig::transducer(
+                onnx_path.join(encoder).to_str().unwrap(),
+                onnx_path.join(decoder).to_str().unwrap(),
+                onnx_path.join(joiner).to_str().unwrap(),
+                onnx_path.join(spec.tokens).to_str().unwrap(),
+            ),
+
+            models::Model::Paraformer { encoder, decoder } => TransducerConfig::paraformer(
+                onnx_path.join(encoder).to_str().unwrap(),
+                onnx_path.join(decoder).to_str().unwrap(),
+                onnx_path.join(spec.tokens).to_str().unwrap(),
+            ),
+
+            models::Model::Zip2Ctc { model } => TransducerConfig::zipformer2_ctc(
+                onnx_path.join(model).to_str().unwrap(),
+                onnx_path.join(spec.tokens).to_str().unwrap(),
+            ),
+        };
 
         if onnx_path.is_dir() {
             return Ok(config);
@@ -277,7 +358,7 @@ impl Transducer {
 
         if !arch_path.is_file() {
             let temp_path = arch_path.with_added_extension("part");
-            download::download_file(model.url, &temp_path).await?;
+            download::download_file(spec.url, &temp_path).await?;
             tokio::fs::rename(temp_path, &arch_path).await?;
         }
 
@@ -287,11 +368,6 @@ impl Transducer {
         decompress(arch_path.as_path(), cache_dir, &ex_opts)?;
 
         Ok(config)
-    }
-
-    /// Make a new [TransducerConfig] with reasonable defaults.
-    pub fn config(encoder: &str, decoder: &str, joiner: &str, tokens: &str) -> TransducerConfig {
-        TransducerConfig::new(encoder, decoder, joiner, tokens)
     }
 
     /// Make an [OnlineStream] for incremental speech recognition.
