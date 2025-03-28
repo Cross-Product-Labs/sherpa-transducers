@@ -65,8 +65,6 @@ async fn my_stream_handler() -> anyhow::Result<()> {
 ```
 
 # feature flags
-By default, building this crate will build `sherpa-onnx` and link it statically.
-
 Default features:
 * `static`: Compile and link `sherpa-onnx` statically
 * `download-models`: Enable support for autodownload/extraction of pretrained transducers
