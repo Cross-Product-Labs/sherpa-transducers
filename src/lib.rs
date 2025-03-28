@@ -695,7 +695,6 @@ impl PhasedStream {
             .min_by_key(|&(_, m)| m)
             .unwrap();
 
-        print!("{i} @ ");
         Ok((self.epoch[i], self.state[i].clone()))
     }
 
