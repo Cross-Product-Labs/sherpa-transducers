@@ -20,7 +20,7 @@ pub struct TransducerSpec<'a> {
 /// <https://k2-fsa.github.io/sherpa/onnx/pretrained_models/online-transducer/zipformer-transducer-models.html#csukuangfj-sherpa-onnx-streaming-zipformer-en-2023-06-21-english>
 ///
 /// <https://github.com/k2-fsa/icefall/pull/984>
-pub const ZIPFORMER_EN_2023_06_21_ENG: TransducerSpec<'static> = TransducerSpec {
+pub const ZIPFORMER_EN_2023_06_21: TransducerSpec<'static> = TransducerSpec {
     url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-en-2023-06-21.tar.bz2",
     name: "sherpa-onnx-streaming-zipformer-en-2023-06-21.tar.bz2",
     encoder: "encoder-epoch-99-avg-1.onnx",
@@ -29,7 +29,7 @@ pub const ZIPFORMER_EN_2023_06_21_ENG: TransducerSpec<'static> = TransducerSpec 
     tokens: "tokens.txt",
 };
 
-pub const ZIPFORMER_EN_2023_06_21_ENG_INT8: TransducerSpec<'static> = TransducerSpec {
+pub const ZIPFORMER_EN_2023_06_21_INT8: TransducerSpec<'static> = TransducerSpec {
     url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-en-2023-06-21.tar.bz2",
     name: "sherpa-onnx-streaming-zipformer-en-2023-06-21.tar.bz2",
     encoder: "encoder-epoch-99-avg-1.int8.onnx",
@@ -45,7 +45,7 @@ pub const ZIPFORMER_EN_2023_06_21_ENG_INT8: TransducerSpec<'static> = Transducer
 /// <https://k2-fsa.github.io/sherpa/onnx/pretrained_models/online-transducer/zipformer-transducer-models.html#csukuangfj-sherpa-onnx-streaming-zipformer-en-2023-06-26-english>
 ///
 /// <https://github.com/k2-fsa/icefall/pull/1058>
-pub const ZIPFORMER_EN_2023_06_26_ENG: TransducerSpec<'static> = TransducerSpec {
+pub const ZIPFORMER_EN_2023_06_26: TransducerSpec<'static> = TransducerSpec {
     url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-en-2023-06-26.tar.bz2",
     name: "sherpa-onnx-streaming-zipformer-en-2023-06-26.tar.bz2",
     encoder: "encoder-epoch-99-avg-1-chunk-16-left-128.onnx",
@@ -54,7 +54,7 @@ pub const ZIPFORMER_EN_2023_06_26_ENG: TransducerSpec<'static> = TransducerSpec 
     tokens: "tokens.txt",
 };
 
-pub const ZIPFORMER_EN_2023_06_26_ENG_INT8: TransducerSpec<'static> = TransducerSpec {
+pub const ZIPFORMER_EN_2023_06_26_INT8: TransducerSpec<'static> = TransducerSpec {
     url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-en-2023-06-26.tar.bz2",
     name: "sherpa-onnx-streaming-zipformer-en-2023-06-26.tar.bz2",
     encoder: "encoder-epoch-99-avg-1-chunk-16-left-128.int8.onnx",
