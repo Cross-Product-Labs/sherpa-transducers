@@ -11,11 +11,11 @@ readme = "readme.md"
 
 [features]
 default = ["static", "download-models"]
+static = ["sherpa-rs-sys/static"]
+download-models = ["futures", "tokio", "reqwest", "indicatif", "decompress"]
 cuda = ["sherpa-rs-sys/cuda"]
 directml = ["sherpa-rs-sys/directml"]
-static = ["sherpa-rs-sys/static"]
 download-binaries = ["sherpa-rs-sys/download-binaries"]
-download-models = ["futures", "tokio", "reqwest", "indicatif", "decompress"]
 
 [dependencies]
 sherpa-rs-sys = { version = "0.6.6", default-features = false }
