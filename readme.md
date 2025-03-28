@@ -38,7 +38,7 @@ And use it:
 use sherpa_transducers::{models::*, Transducer};
 
 async fn my_stream_handler() -> anyhow::Result<()> {
-    let mut cfg = Transducer::quickload(".", ZIPFORMER_EN_2023_06_21_ENG).await?;
+    let cfg = Transducer::quickload(".", ZIPFORMER_EN_2023_06_21_ENG).await?;
     let t = cfg.num_threads(2).build()?;
     let mut s = t.phased_stream(1)?;
 
