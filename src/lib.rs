@@ -75,12 +75,7 @@ impl TransducerConfig {
 
     /// Make a new [TransducerConfig] for a zipformer2 ctc model with reasonable defaults.
     pub fn zipformer2_ctc(model: &str, tokens: &str) -> Self {
-        Self::new(
-            Model::Zip2Ctc {
-                model: model.into(),
-            },
-            tokens,
-        )
+        Self::new(Model::Zip2Ctc { model: model.into() }, tokens)
     }
 
     fn new(load: Model, tokens: &str) -> Self {
@@ -200,11 +195,7 @@ impl TransducerConfig {
         config.feat_config.feature_dim = self.feature_dim;
 
         match self.load {
-            Model::Transducer {
-                encoder,
-                decoder,
-                joiner,
-            } => {
+            Model::Transducer { encoder, decoder, joiner } => {
                 config.model_config.transducer.encoder = track_cstr(dcs, &encoder);
                 config.model_config.transducer.decoder = track_cstr(dcs, &decoder);
                 config.model_config.transducer.joiner = track_cstr(dcs, &joiner);
@@ -246,10 +237,7 @@ impl TransducerConfig {
 
 fn online_config() -> SherpaOnnxOnlineRecognizerConfig {
     SherpaOnnxOnlineRecognizerConfig {
-        feat_config: SherpaOnnxFeatureConfig {
-            sample_rate: 0,
-            feature_dim: 0,
-        },
+        feat_config: SherpaOnnxFeatureConfig { sample_rate: 0, feature_dim: 0 },
         model_config: SherpaOnnxOnlineModelConfig {
             transducer: SherpaOnnxOnlineTransducerModelConfig {
                 encoder: null(),
@@ -329,11 +317,7 @@ impl Transducer {
         onnx_path.set_extension("");
 
         let config = match spec.load {
-            models::Model::Transducer {
-                encoder,
-                decoder,
-                joiner,
-            } => TransducerConfig::transducer(
+            models::Model::Transducer { encoder, decoder, joiner } => TransducerConfig::transducer(
                 onnx_path.join(encoder).to_str().unwrap(),
                 onnx_path.join(decoder).to_str().unwrap(),
                 onnx_path.join(joiner).to_str().unwrap(),
