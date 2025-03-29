@@ -4,6 +4,8 @@
 //!
 //! TLDR; use one of the `NEMO_CONFORMER_TRANSDUCER_EN` variants or `ZIPFORMER_EN_2023_06_21_320MS` and
 //! call it a day unless you have a particularly driving urge to evaluate a random bunch of ASR models.
+//!
+//! The best quality is currently achieved by the zipformer with `modified_beam_search`.
 
 /// Definition of a pretrained transducer model.
 // TODO: include hash or just reupload on huggingface and use their model downloader logic
