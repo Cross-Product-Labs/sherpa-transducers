@@ -148,12 +148,12 @@ pub const CONFORMER_EN_2023_05_09_640MS_INT8: Spec<'static> = Spec {
     ..CONFORMER_EN_2023_05_09_640MS
 };
 
-/// Reasonably good quality multilingual recognition but buggy (for now).
+/// Reasonably good quality multilingual recognition.
 ///
 /// <https://github.com/yangb05/PengChengStarling>
-// TODO: deletion bugs, need to test an unquantized version to see if that helps
-// https://github.com/yangb05/PengChengStarling
-// https://huggingface.co/stdo/PengChengStarling
+///
+/// Requires `greedy_search` to work without deletion errors.
+// TODO: non-quanted at https://huggingface.co/stdo/PengChengStarling
 pub const ZIPFORMER_AR_EN_ID_JA_RU_TH_VI_ZH_2025_02_10_320MS_INT8: Spec<'static> = Spec {
     url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-ar_en_id_ja_ru_th_vi_zh-2025-02-10.tar.bz2",
     name: "sherpa-onnx-streaming-zipformer-ar_en_id_ja_ru_th_vi_zh-2025-02-10.tar.bz2",
