@@ -35,11 +35,14 @@ cargo add sherpa-transducers
 And use it:
 
 ```rust
-use sherpa_transducers::{models::*, Transducer};
+use sherpa_transducers::Transducer;
 
 async fn my_stream_handler() -> anyhow::Result<()> {
-    let cfg = Transducer::quickload(".", ZIPFORMER_EN_2023_06_21_320MS).await?;
-    let t = cfg.num_threads(2).build()?;
+    let t = Transducer::from_pretrained("nytopop/nemo-conformer-transducer-en-80ms")
+        .await?
+        .num_threads(2)
+        .build()?;
+
     let mut s = t.phased_stream(1)?;
 
     loop {
@@ -53,8 +56,7 @@ async fn my_stream_handler() -> anyhow::Result<()> {
         // actually do the decode
         s.decode();
 
-        // transcript may be retroactively modified if beam search re-arranges things,
-        // so don't depend on prefix staying the same until s.reset() is called.
+        // get the transcript since last reset
         let (epoch, transcript) = s.state()?;
 
         if transcript.contains("DELETE THIS") {
@@ -67,7 +69,7 @@ async fn my_stream_handler() -> anyhow::Result<()> {
 # feature flags
 Default features:
 * `static`: Compile and link `sherpa-onnx` statically
-* `download-models`: Enable support for autodownload/extraction of pretrained transducers
+* `download-models`: Enable support for loading pretrained transducers from huggingface
 
 Features disabled by default:
 

@@ -12,7 +12,7 @@ readme = "readme.md"
 [features]
 default = ["static", "download-models"]
 static = ["sherpa-rs-sys/static"]
-download-models = ["futures", "tokio", "reqwest", "indicatif", "decompress"]
+download-models = ["tokio", "hf-hub", "serde", "serde_json"]
 cuda = ["sherpa-rs-sys/cuda"]
 directml = ["sherpa-rs-sys/directml"]
 download-binaries = ["sherpa-rs-sys/download-binaries"]
@@ -23,8 +23,7 @@ anyhow = "1.0"
 num_cpus = "1.16"
 
 # download-models
-futures = { version = "0.3", optional = true }
-tokio = { version = "1", features = ["fs", "macros"], optional = true }
-reqwest = { version = "0.12", features = ["stream"], optional = true }
-indicatif = { version = "0.17", optional = true }
-decompress = { version = "0.6", features = ["tarbz"], default-features = false, optional = true }
+tokio = { version = "1", features = ["fs"], optional = true }
+hf-hub = { version = "0.4", optional = true }
+serde = { version = "1", optional = true }
+serde_json = { version = "1", optional = true }

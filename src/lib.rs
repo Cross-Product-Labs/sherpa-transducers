@@ -4,16 +4,10 @@ use std::ffi::{CStr, CString};
 use std::ptr::null;
 use std::sync::Arc;
 
-use anyhow::{Result, ensure};
+use anyhow::{Result, anyhow, ensure};
 use sherpa_rs_sys::*;
 
-#[cfg(feature = "download-models")]
-mod download;
-
-#[cfg(feature = "download-models")]
-pub mod models;
-
-/// Configuration for [Transducer]. See [Transducer::quickload] for a simple way to get started.
+/// Configuration for [Transducer]. See [Transducer::from_pretrained] for a simple way to get started.
 #[derive(Clone)]
 pub struct TransducerConfig {
     sample_rate: i32,
@@ -302,54 +296,60 @@ pub struct Transducer {
 }
 
 impl Transducer {
-    /// Download a defined [models::Spec] to `dir` and make a [TransducerConfig] that will load it.
+    /// Create a [TransducerConfig] from a pretrained transducer model on huggingface.
+    ///
+    /// ```no_run
+    /// use sherpa_transducers::Transducer;
+    ///
+    /// let model = Transducer::from_pretrained("nytopop/nemo-conformer-transducer-en-80ms")
+    ///     .await?
+    ///     .build()?;
+    /// ```
     #[cfg(feature = "download-models")]
-    pub async fn quickload<P>(dir: P, spec: models::Spec<'_>) -> Result<TransducerConfig>
-    where
-        P: AsRef<std::path::Path>,
-    {
-        let cache_dir = dir.as_ref();
+    pub async fn from_pretrained<S: AsRef<str>>(model: S) -> Result<TransducerConfig> {
+        use hf_hub::api::tokio::ApiBuilder;
+        use tokio::fs;
 
-        let arch_path = cache_dir.join(spec.name);
+        let api = ApiBuilder::from_env().with_progress(true).build()?;
+        let repo = api.model(model.as_ref().into());
+        let conf = repo.get("config.json").await?;
+        let config = fs::read_to_string(conf).await?;
 
-        let mut onnx_path = arch_path.clone();
-        onnx_path.set_extension("");
-        onnx_path.set_extension("");
+        #[derive(serde::Deserialize)]
+        struct Config {
+            kind: String,
+            arch: String,
+            decoding_method: Option<String>,
+        }
 
-        let config = match spec.load {
-            models::Model::Transducer { encoder, decoder, joiner } => TransducerConfig::transducer(
-                onnx_path.join(encoder).to_str().unwrap(),
-                onnx_path.join(decoder).to_str().unwrap(),
-                onnx_path.join(joiner).to_str().unwrap(),
-                onnx_path.join(spec.tokens).to_str().unwrap(),
+        let Config { kind, arch, decoding_method } = serde_json::from_str(&config)?;
+        ensure!(kind == "online_asr", "unknown model kind: {kind:?}");
+
+        let mut config = match arch.as_str() {
+            "transducer" => TransducerConfig::transducer(
+                repo.get("encoder.onnx").await?.to_str().unwrap(),
+                repo.get("decoder.onnx").await?.to_str().unwrap(),
+                repo.get("joiner.onnx").await?.to_str().unwrap(),
+                repo.get("tokens.txt").await?.to_str().unwrap(),
             ),
 
-            models::Model::Paraformer { encoder, decoder } => TransducerConfig::paraformer(
-                onnx_path.join(encoder).to_str().unwrap(),
-                onnx_path.join(decoder).to_str().unwrap(),
-                onnx_path.join(spec.tokens).to_str().unwrap(),
+            "paraformer" => TransducerConfig::paraformer(
+                repo.get("encoder.onnx").await?.to_str().unwrap(),
+                repo.get("decoder.onnx").await?.to_str().unwrap(),
+                repo.get("tokens.txt").await?.to_str().unwrap(),
             ),
 
-            models::Model::Zip2Ctc { model } => TransducerConfig::zipformer2_ctc(
-                onnx_path.join(model).to_str().unwrap(),
-                onnx_path.join(spec.tokens).to_str().unwrap(),
+            "zipformer2_ctc" => TransducerConfig::zipformer2_ctc(
+                repo.get("model.onnx").await?.to_str().unwrap(),
+                repo.get("tokens.txt").await?.to_str().unwrap(),
             ),
+
+            _ => return Err(anyhow!("unknown model arch: {arch:?}")),
         };
 
-        if onnx_path.is_dir() {
-            return Ok(config);
+        if let Some("greedy_search") = decoding_method.as_deref() {
+            config = config.greedy_search();
         }
-
-        if !arch_path.is_file() {
-            let temp_path = arch_path.with_added_extension("part");
-            download::download_file(spec.url, &temp_path).await?;
-            tokio::fs::rename(temp_path, &arch_path).await?;
-        }
-
-        use decompress::*;
-        let ex_opts = ExtractOptsBuilder::default().build()?;
-
-        decompress(arch_path.as_path(), cache_dir, &ex_opts)?;
 
         Ok(config)
     }
