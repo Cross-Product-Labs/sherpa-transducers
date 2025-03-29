@@ -299,11 +299,14 @@ impl Transducer {
     /// Create a [TransducerConfig] from a pretrained transducer model on huggingface.
     ///
     /// ```no_run
+    /// # tokio_test::block_on(async {
     /// use sherpa_transducers::Transducer;
     ///
     /// let model = Transducer::from_pretrained("nytopop/nemo-conformer-transducer-en-80ms")
     ///     .await?
     ///     .build()?;
+    /// # Ok::<_, anyhow::Error>(())
+    /// # });
     /// ```
     #[cfg(feature = "download-models")]
     pub async fn from_pretrained<S: AsRef<str>>(model: S) -> Result<TransducerConfig> {
