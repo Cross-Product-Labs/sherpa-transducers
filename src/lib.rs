@@ -1,4 +1,3 @@
-#![feature(path_add_extension)]
 //! This crate does low latency streaming automatic speech recognition for realtime-esque applications.
 use std::ffi::{CStr, CString};
 use std::ptr::null;
