@@ -18,7 +18,7 @@
 </p>
 
 # sherpa-transducers
-A wrapper around streaming mode sherpa-onnx zipformer transducers.
+A rust wrapper around streaming mode sherpa-onnx zipformer transducers.
 
 # performance characteristics
 It's very quicklike. Expect to be able to stay abreast of a realtime audio stream on 1-2 modest CPU cores.
