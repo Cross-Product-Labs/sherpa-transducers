@@ -1,7 +1,7 @@
 [package]
 name = "sherpa-transducers"
 description = "low latency ASR via sherpa-onnx streaming zipformer-transducer models"
-version = "0.3.2"
+version = "0.3.3"
 edition = "2024"
 license = "Apache-2.0"
 repository = "https://github.com/Cross-Product-Labs/sherpa-transducers"
@@ -10,8 +10,8 @@ authors = ["nytopop"]
 readme = "readme.md"
 
 [package.metadata.docs.rs]
-all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+features = ["cuda", "directml"]
 
 [features]
 default = ["static", "download-models"]
