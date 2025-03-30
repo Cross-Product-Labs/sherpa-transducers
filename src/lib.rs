@@ -1,4 +1,5 @@
 //! This crate does low latency streaming automatic speech recognition for realtime-esque applications.
+#![cfg_attr(docsrs, feature(doc_cfg))]
 use std::ffi::{CStr, CString};
 use std::ptr::null;
 use std::sync::Arc;
@@ -115,6 +116,7 @@ impl TransducerConfig {
 
     /// Use CUDA as the compute provider. This requires CUDA 11.8.
     #[cfg(feature = "cuda")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "cuda")))]
     pub fn cuda(mut self) -> Self {
         self.provider = "cuda".into();
         self
@@ -122,6 +124,7 @@ impl TransducerConfig {
 
     /// Use DirectML as the compute provider.
     #[cfg(feature = "directml")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "directml")))]
     pub fn directml(mut self) -> Self {
         self.provider = "directml".into();
         self
@@ -308,6 +311,7 @@ impl Transducer {
     /// # });
     /// ```
     #[cfg(feature = "download-models")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "download-models")))]
     pub async fn from_pretrained<S: AsRef<str>>(model: S) -> Result<TransducerConfig> {
         use hf_hub::api::tokio::ApiBuilder;
         use tokio::fs;

@@ -1,13 +1,17 @@
 [package]
 name = "sherpa-transducers"
 description = "low latency ASR via sherpa-onnx streaming zipformer-transducer models"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2024"
 license = "Apache-2.0"
 repository = "https://github.com/Cross-Product-Labs/sherpa-transducers"
 keywords = ["audio", "speech-recognition", "sherpa", "asr", "realtime"]
 authors = ["nytopop"]
 readme = "readme.md"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
 default = ["static", "download-models"]
