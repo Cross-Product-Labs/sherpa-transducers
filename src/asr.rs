@@ -288,7 +288,7 @@ impl Transducer {
     ///
     /// ```no_run
     /// # tokio_test::block_on(async {
-    /// use sherpa_transducers::Transducer;
+    /// use sherpa_transducers::asr::Transducer;
     ///
     /// let model = Transducer::from_pretrained("nytopop/nemo-conformer-transducer-en-80ms")
     ///     .await?
