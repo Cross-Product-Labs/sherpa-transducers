@@ -275,6 +275,26 @@ fn online_config() -> SherpaOnnxOnlineRecognizerConfig {
     }
 }
 
+struct ModelPtr {
+    ptr: *const SherpaOnnxOnlineRecognizer,
+    // NOTE: unsure if sherpa-onnx accesses these pointers post-init; we err on the side of caution and
+    // keep them allocated until we drop the whole transducer.
+    #[allow(dead_code)]
+    dcs: Vec<DropCString>,
+}
+
+// SAFETY: thread locals? surely not
+unsafe impl Send for ModelPtr {}
+
+// SAFETY: afaik there is no interior mutability through &refs
+unsafe impl Sync for ModelPtr {}
+
+impl Drop for ModelPtr {
+    fn drop(&mut self) {
+        unsafe { SherpaOnnxDestroyOnlineRecognizer(self.ptr) }
+    }
+}
+
 /// Streaming zipformer transducer speech recognition model.
 #[derive(Clone)]
 pub struct Model {
@@ -398,26 +418,6 @@ impl Model {
     // WARN: DO NOT MUTATE THROUGH THIS POINTER ON PAIN OF UNSOUNDNESS
     fn as_ptr(&self) -> *const SherpaOnnxOnlineRecognizer {
         self.inner.ptr
-    }
-}
-
-struct ModelPtr {
-    ptr: *const SherpaOnnxOnlineRecognizer,
-    // NOTE: unsure if sherpa-onnx accesses these pointers post-init; we err on the side of caution and
-    // keep them allocated until we drop the whole transducer.
-    #[allow(dead_code)]
-    dcs: Vec<DropCString>,
-}
-
-// SAFETY: thread locals? surely not
-unsafe impl Send for ModelPtr {}
-
-// SAFETY: afaik there is no interior mutability through &refs
-unsafe impl Sync for ModelPtr {}
-
-impl Drop for ModelPtr {
-    fn drop(&mut self) {
-        unsafe { SherpaOnnxDestroyOnlineRecognizer(self.ptr) }
     }
 }
 
