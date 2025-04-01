@@ -35,7 +35,7 @@ cargo add sherpa-transducers
 And use it:
 
 ```rust
-use sherpa_transducers::Transducer;
+use sherpa_transducers::asr::Transducer;
 
 async fn my_stream_handler() -> anyhow::Result<()> {
     let t = Transducer::from_pretrained("nytopop/zipformer-en-2023-06-21-320ms")
