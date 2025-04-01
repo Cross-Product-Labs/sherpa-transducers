@@ -3,10 +3,10 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 use std::ffi::CString;
 
-/// Automatic speech recognition.
+/// Automatic speech recognition
 pub mod asr;
 
-/// Audio tagging.
+/// Audio tagging
 pub mod tag;
 
 struct DropCString(*mut i8);
