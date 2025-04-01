@@ -173,7 +173,7 @@ impl Model {
                     .to_str()
                     .unwrap(),
             )),
-            "ced" => Ok(Config::zipformer(
+            "ced" => Ok(Config::ced(
                 repo.get("model.onnx").await?.to_str().unwrap(),
                 repo.get("class_labels_indices.csv")
                     .await?
