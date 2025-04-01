@@ -7,12 +7,12 @@ use sherpa_rs_sys::*;
 
 use crate::{DropCString, track_cstr};
 
-/// Configuration for [Transducer]. See [Transducer::from_pretrained] for a simple way to get started.
+/// Configuration for a [Model]. See [Model::from_pretrained] for a simple way to get started.
 #[derive(Clone)]
-pub struct TransducerConfig {
+pub struct Config {
     sample_rate: i32,
     feature_dim: i32,
-    load: Model,
+    load: Arch,
     tokens: String,
     num_threads: i32,
     provider: String,
@@ -26,7 +26,7 @@ pub struct TransducerConfig {
 }
 
 #[derive(Clone)]
-enum Model {
+enum Arch {
     Transducer {
         encoder: String,
         decoder: String,
@@ -43,11 +43,11 @@ enum Model {
     },
 }
 
-impl TransducerConfig {
-    /// Make a new [TransducerConfig] for a transducer model with reasonable defaults.
+impl Config {
+    /// Make a new [Config] for a transducer model with reasonable defaults.
     pub fn transducer(encoder: &str, decoder: &str, joiner: &str, tokens: &str) -> Self {
         Self::new(
-            Model::Transducer {
+            Arch::Transducer {
                 encoder: encoder.into(),
                 decoder: decoder.into(),
                 joiner: joiner.into(),
@@ -56,10 +56,10 @@ impl TransducerConfig {
         )
     }
 
-    /// Make a new [TransducerConfig] for a paraformer model with reasonable defaults.
+    /// Make a new [Config] for a paraformer model with reasonable defaults.
     pub fn paraformer(encoder: &str, decoder: &str, tokens: &str) -> Self {
         Self::new(
-            Model::Paraformer {
+            Arch::Paraformer {
                 encoder: encoder.into(),
                 decoder: decoder.into(),
             },
@@ -67,12 +67,12 @@ impl TransducerConfig {
         )
     }
 
-    /// Make a new [TransducerConfig] for a zipformer2 ctc model with reasonable defaults.
+    /// Make a new [Config] for a zipformer2 ctc model with reasonable defaults.
     pub fn zipformer2_ctc(model: &str, tokens: &str) -> Self {
-        Self::new(Model::Zip2Ctc { model: model.into() }, tokens)
+        Self::new(Arch::Zip2Ctc { model: model.into() }, tokens)
     }
 
-    fn new(load: Model, tokens: &str) -> Self {
+    fn new(load: Arch, tokens: &str) -> Self {
         Self {
             sample_rate: 16000,
             feature_dim: 80,
@@ -148,7 +148,7 @@ impl TransducerConfig {
         self
     }
 
-    /// Maximum number of active paths to keep when [TransducerConfig::modified_beam_search] is used.
+    /// Maximum number of active paths to keep when [Config::modified_beam_search] is used.
     ///
     /// Defaults to 16.
     pub fn max_active_paths(mut self, n: usize) -> Self {
@@ -180,8 +180,8 @@ impl TransducerConfig {
         self
     }
 
-    /// Build your very own [Transducer].
-    pub fn build(self) -> Result<Transducer> {
+    /// Build your very own [Model].
+    pub fn build(self) -> Result<Model> {
         let mut config = online_config();
 
         let mut _dcs = vec![];
@@ -191,18 +191,18 @@ impl TransducerConfig {
         config.feat_config.feature_dim = self.feature_dim;
 
         match self.load {
-            Model::Transducer { encoder, decoder, joiner } => {
+            Arch::Transducer { encoder, decoder, joiner } => {
                 config.model_config.transducer.encoder = track_cstr(dcs, &encoder);
                 config.model_config.transducer.decoder = track_cstr(dcs, &decoder);
                 config.model_config.transducer.joiner = track_cstr(dcs, &joiner);
             }
 
-            Model::Paraformer { encoder, decoder } => {
+            Arch::Paraformer { encoder, decoder } => {
                 config.model_config.paraformer.encoder = track_cstr(dcs, &encoder);
                 config.model_config.paraformer.decoder = track_cstr(dcs, &decoder);
             }
 
-            Model::Zip2Ctc { model } => {
+            Arch::Zip2Ctc { model } => {
                 config.model_config.zipformer2_ctc.model = track_cstr(dcs, &model);
             }
         }
@@ -219,8 +219,8 @@ impl TransducerConfig {
         let ptr = unsafe { SherpaOnnxCreateOnlineRecognizer(&config) };
         ensure!(!ptr.is_null(), "failed to load transducer model");
 
-        let mut tdc = Transducer {
-            inner: Arc::new(TransducerPtr { ptr, dcs: _dcs }),
+        let mut tdc = Model {
+            inner: Arc::new(ModelPtr { ptr, dcs: _dcs }),
             sample_rate: self.sample_rate as usize,
             chunk_size: 0,
         };
@@ -277,20 +277,20 @@ fn online_config() -> SherpaOnnxOnlineRecognizerConfig {
 
 /// Streaming zipformer transducer speech recognition model.
 #[derive(Clone)]
-pub struct Transducer {
-    inner: Arc<TransducerPtr>,
+pub struct Model {
+    inner: Arc<ModelPtr>,
     sample_rate: usize,
     chunk_size: usize,
 }
 
-impl Transducer {
-    /// Create a [TransducerConfig] from a pretrained transducer model on huggingface.
+impl Model {
+    /// Create a [Config] from a pretrained transducer model on huggingface.
     ///
     /// ```no_run
     /// # tokio_test::block_on(async {
-    /// use sherpa_transducers::asr::Transducer;
+    /// use sherpa_transducers::asr;
     ///
-    /// let model = Transducer::from_pretrained("nytopop/nemo-conformer-transducer-en-80ms")
+    /// let model = asr::Model::from_pretrained("nytopop/nemo-conformer-transducer-en-80ms")
     ///     .await?
     ///     .build()?;
     /// # Ok::<_, anyhow::Error>(())
@@ -298,7 +298,7 @@ impl Transducer {
     /// ```
     #[cfg(feature = "download-models")]
     #[cfg_attr(docsrs, doc(cfg(feature = "download-models")))]
-    pub async fn from_pretrained<S: AsRef<str>>(model: S) -> Result<TransducerConfig> {
+    pub async fn from_pretrained<S: AsRef<str>>(model: S) -> Result<Config> {
         use hf_hub::api::tokio::ApiBuilder;
         use tokio::fs;
 
@@ -308,30 +308,30 @@ impl Transducer {
         let config = fs::read_to_string(conf).await?;
 
         #[derive(serde::Deserialize)]
-        struct Config {
+        struct Conf {
             kind: String,
             arch: String,
             decoding_method: Option<String>,
         }
 
-        let Config { kind, arch, decoding_method } = serde_json::from_str(&config)?;
+        let Conf { kind, arch, decoding_method } = serde_json::from_str(&config)?;
         ensure!(kind == "online_asr", "unknown model kind: {kind:?}");
 
         let mut config = match arch.as_str() {
-            "transducer" => TransducerConfig::transducer(
+            "transducer" => Config::transducer(
                 repo.get("encoder.onnx").await?.to_str().unwrap(),
                 repo.get("decoder.onnx").await?.to_str().unwrap(),
                 repo.get("joiner.onnx").await?.to_str().unwrap(),
                 repo.get("tokens.txt").await?.to_str().unwrap(),
             ),
 
-            "paraformer" => TransducerConfig::paraformer(
+            "paraformer" => Config::paraformer(
                 repo.get("encoder.onnx").await?.to_str().unwrap(),
                 repo.get("decoder.onnx").await?.to_str().unwrap(),
                 repo.get("tokens.txt").await?.to_str().unwrap(),
             ),
 
-            "zipformer2_ctc" => TransducerConfig::zipformer2_ctc(
+            "zipformer2_ctc" => Config::zipformer2_ctc(
                 repo.get("model.onnx").await?.to_str().unwrap(),
                 repo.get("tokens.txt").await?.to_str().unwrap(),
             ),
@@ -401,7 +401,7 @@ impl Transducer {
     }
 }
 
-struct TransducerPtr {
+struct ModelPtr {
     ptr: *const SherpaOnnxOnlineRecognizer,
     // NOTE: unsure if sherpa-onnx accesses these pointers post-init; we err on the side of caution and
     // keep them allocated until we drop the whole transducer.
@@ -410,12 +410,12 @@ struct TransducerPtr {
 }
 
 // SAFETY: thread locals? surely not
-unsafe impl Send for TransducerPtr {}
+unsafe impl Send for ModelPtr {}
 
 // SAFETY: afaik there is no interior mutability through &refs
-unsafe impl Sync for TransducerPtr {}
+unsafe impl Sync for ModelPtr {}
 
-impl Drop for TransducerPtr {
+impl Drop for ModelPtr {
     fn drop(&mut self) {
         unsafe { SherpaOnnxDestroyOnlineRecognizer(self.ptr) }
     }
@@ -426,9 +426,9 @@ impl Drop for TransducerPtr {
 /// You can do VAD if you want to reduce compute utilization, but feeding constant streaming audio into
 /// this is perfectly reasonable. Decoding is incremental and constant latency.
 ///
-/// Created by [Transducer::online_stream].
+/// Created by [Model::online_stream].
 pub struct OnlineStream {
-    tdc: Transducer,
+    tdc: Model,
     ptr: *const SherpaOnnxOnlineStream,
 }
 
@@ -596,7 +596,7 @@ impl OnlineStream {
 /// For most zipformer transducers, RTF is favorable (Q is low) and the extra load can be an acceptable
 /// trade off for the observed latency improvement.
 ///
-/// Created by [Transducer::phased_stream].
+/// Created by [Model::phased_stream].
 // TODO: look into the underlying implementation to see if we can fuse beam states: having disconnected
 // beams is not super optimal even though it does work
 // TODO: support hooking into external continuous batch rendezvous point for moar throughput
@@ -609,7 +609,7 @@ pub struct PhasedStream {
 
 impl PhasedStream {
     /// Make a new [PhasedStream].
-    fn new(n_phase: usize, transducer: &Transducer) -> Result<Self> {
+    fn new(n_phase: usize, transducer: &Model) -> Result<Self> {
         let mut phase = vec![];
         let mut epoch = vec![];
 
