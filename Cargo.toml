@@ -25,6 +25,7 @@ download-binaries = ["sherpa-rs-sys/download-binaries"]
 sherpa-rs-sys = { version = "0.6.6", default-features = false }
 anyhow = "1.0"
 num_cpus = "1.16"
+rubato = "0.16"
 
 # download-models
 tokio = { version = "1", features = ["fs"], optional = true }
