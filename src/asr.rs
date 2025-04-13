@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::ffi::CStr;
 use std::ptr::null;
 use std::sync::Arc;
@@ -536,6 +537,11 @@ impl OnlineStream {
 
     /// Returns recognition state since the last call to [OnlineStream::reset].
     pub fn result(&self) -> Result<String> {
+        self.result_with(|cow| cow.into_owned())
+    }
+
+    /// Returns recognition state since the last call to [OnlineStream::reset].
+    pub fn result_with<F: FnOnce(Cow<'_, str>) -> R, R>(&self, f: F) -> Result<R> {
         unsafe {
             let res = SherpaOnnxGetOnlineStreamResult(self.tdc.as_ptr(), self.ptr);
             ensure!(!res.is_null(), "failed to get online stream result");
@@ -543,7 +549,7 @@ impl OnlineStream {
             let txt = (*res).text;
             ensure!(!txt.is_null(), "failed to get online stream result");
 
-            let out = CStr::from_ptr(txt).to_string_lossy().into_owned();
+            let out = f(CStr::from_ptr(txt).to_string_lossy());
 
             SherpaOnnxDestroyOnlineRecognizerResult(res);
 
