@@ -27,7 +27,7 @@ pub struct Config {
 }
 
 #[derive(Clone)]
-enum Arch {
+pub enum Arch {
     Transducer {
         encoder: String,
         decoder: String,
@@ -305,7 +305,7 @@ pub struct Model {
 }
 
 impl Model {
-    /// Create a [Config] from a pretrained transducer model on huggingface.
+    /// Create a [Config] from a pretrained model on huggingface.
     ///
     /// ```no_run
     /// # tokio_test::block_on(async {
@@ -365,6 +365,40 @@ impl Model {
         }
 
         Ok(config)
+    }
+
+    /// Create a [Config] from a pretrained ASR model on huggingface without a `config.json`.
+    #[cfg(feature = "download-models")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "download-models")))]
+    pub async fn from_pretrained_arch<S>(model: S, mut arch: Arch, tokens: S) -> Result<Config>
+    where
+        S: AsRef<str>,
+    {
+        use hf_hub::api::tokio::ApiBuilder;
+
+        let api = ApiBuilder::from_env().with_progress(true).build()?;
+        let repo = api.model(model.as_ref().into());
+
+        match &mut arch {
+            Arch::Transducer { encoder, decoder, joiner } => {
+                *encoder = repo.get(encoder).await?.to_str().unwrap().into();
+                *decoder = repo.get(decoder).await?.to_str().unwrap().into();
+                *joiner = repo.get(joiner).await?.to_str().unwrap().into();
+            }
+
+            Arch::Paraformer { encoder, decoder } => {
+                *encoder = repo.get(encoder).await?.to_str().unwrap().into();
+                *decoder = repo.get(decoder).await?.to_str().unwrap().into();
+            }
+
+            Arch::Zip2Ctc { model } => {
+                *model = repo.get(model).await?.to_str().unwrap().into();
+            }
+        }
+
+        let tokens = repo.get(tokens.as_ref()).await?;
+
+        Ok(Config::new(arch, tokens.to_str().unwrap()))
     }
 
     /// Make an [OnlineStream] for incremental speech recognition.
