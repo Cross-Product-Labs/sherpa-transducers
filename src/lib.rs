@@ -22,3 +22,21 @@ fn track_cstr(dcs: &mut Vec<DropCString>, s: &str) -> *const i8 {
     dcs.push(DropCString(p));
     p
 }
+
+fn default_num_threads() -> usize {
+    if cfg!(feature = "cuda") || cfg!(feature = "directml") {
+        1
+    } else {
+        num_cpus::get_physical().min(4)
+    }
+}
+
+fn default_compute_provider() -> &'static str {
+    if cfg!(feature = "cuda") {
+        "cuda"
+    } else if cfg!(feature = "directml") {
+        "directml"
+    } else {
+        "cpu"
+    }
+}

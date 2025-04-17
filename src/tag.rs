@@ -38,8 +38,8 @@ impl Config {
     fn new(model: Arch, labels: &str) -> Self {
         Self {
             model,
-            num_threads: num_cpus::get_physical().min(4) as i32,
-            provider: "cpu".into(),
+            num_threads: crate::default_num_threads() as i32,
+            provider: crate::default_compute_provider().into(),
             debug: 0,
             labels: labels.into(),
             top_k: 4,
