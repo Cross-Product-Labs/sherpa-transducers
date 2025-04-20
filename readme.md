@@ -57,7 +57,7 @@ async fn my_stream_handler() -> anyhow::Result<()> {
         s.decode();
 
         // get the transcript since last reset
-        let (epoch, transcript) = s.state()?;
+        let (epoch, transcript) = s.result()?;
 
         if transcript.contains("DELETE THIS") {
             s.reset();

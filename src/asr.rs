@@ -97,7 +97,7 @@ impl Config {
         self
     }
 
-    /// Set the model's sample rate - usually 80 for most transducers.
+    /// Set the model's feature dimension - usually 80 for most transducers.
     pub fn feature_dim(mut self, dim: usize) -> Self {
         self.feature_dim = dim as i32;
         self
