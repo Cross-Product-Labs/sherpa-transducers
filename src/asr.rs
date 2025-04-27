@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::ffi::CStr;
 use std::ops::DerefMut;
 use std::ptr::null;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, mpsc};
 
 use anyhow::{Result, anyhow, ensure};
 use sherpa_rs_sys::*;
@@ -221,10 +221,14 @@ impl Config {
         let ptr = unsafe { SherpaOnnxCreateOnlineRecognizer(&config) };
         ensure!(!ptr.is_null(), "failed to load transducer model");
 
+        let (tx, rx) = mpsc::channel();
+
         let mut tdc = Model {
             inner: Arc::new(ModelPtr { ptr, dcs: _dcs }),
             sample_rate: self.sample_rate as usize,
             chunk_size: 0,
+            tx,
+            rx: Arc::new(Mutex::new(rx)),
         };
 
         tdc.chunk_size = tdc.get_chunk_size()?;
@@ -303,6 +307,8 @@ pub struct Model {
     inner: Arc<ModelPtr>,
     sample_rate: usize,
     chunk_size: usize,
+    tx: mpsc::Sender<OnlineStreamPtr>,
+    rx: Arc<Mutex<mpsc::Receiver<OnlineStreamPtr>>>,
 }
 
 impl Model {
@@ -457,6 +463,12 @@ impl Model {
     }
 }
 
+struct OnlineStreamPtr(*const SherpaOnnxOnlineStream);
+
+unsafe impl Send for OnlineStreamPtr {}
+
+unsafe impl Sync for OnlineStreamPtr {}
+
 /// Context state for streaming speech recognition.
 ///
 /// You can do VAD if you want to reduce compute utilization, but feeding constant streaming audio into
@@ -558,6 +570,34 @@ impl OnlineStream {
 
         let mut masked: Vec<_> = streams
             .filter_map(|s| s.is_ready().then_some(s.ptr))
+            .collect();
+
+        while !masked.is_empty() {
+            // only the masked subset of ready streams
+            unsafe {
+                SherpaOnnxDecodeMultipleOnlineStreams(tdc, masked.as_mut_ptr(), masked.len() as i32)
+            }
+
+            // remove any streams that aren't ready
+            masked.retain(|&ptr| unsafe { SherpaOnnxIsOnlineStreamReady(tdc, ptr) } == 1);
+        }
+    }
+
+    /// Decode all available feature frames in a shared concurrency context.
+    ///
+    /// This introduces a small amount of synchronization overhead in exchange for much better compute
+    /// utilization.
+    pub fn decode_shared(&mut self) {
+        // ensure our ptr is in the shared queue (for the case where we don't acquire the lock first)
+        self.tdc.tx.send(OnlineStreamPtr(self.ptr)).unwrap();
+
+        let que = self.tdc.rx.lock().unwrap();
+        let tdc = self.tdc.as_ptr();
+
+        let mut masked: Vec<_> = que
+            .try_iter()
+            .map(|p| p.0)
+            .filter(|&ptr| unsafe { SherpaOnnxIsOnlineStreamReady(tdc, ptr) } == 1)
             .collect();
 
         while !masked.is_empty() {
