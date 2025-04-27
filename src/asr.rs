@@ -489,7 +489,7 @@ impl OnlineStream {
     /// That restriction makes it quite useless, so ymmv. I have not observed any problems doing so so
     /// long as an intervening call to [OnlineStream::reset] exists:
     ///
-    /// ```skipuse tokio::io::AsyncWriteExt;
+    /// ```skip
     /// unsafe { s.flush_buffers() };
     /// s.decode();
     /// s.reset();
