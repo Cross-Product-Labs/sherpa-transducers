@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::ffi::CStr;
+use std::ops::DerefMut;
 use std::ptr::null;
 use std::sync::Arc;
 
@@ -544,17 +545,18 @@ impl OnlineStream {
         unsafe { SherpaOnnxDecodeOnlineStream(self.tdc.as_ptr(), self.ptr) }
     }
 
-    /// Decode all available feature frames in the provided streams concurrently.
+    /// Decode all available feature frames in the provided iterator of streams concurrently.
     ///
     /// This batches all operations together, and thus is superior to calling [OnlineStream::decode] on
     /// every [OnlineStream] in separate threads (though it is not *invalid* to do so, if desired).
-    pub fn decode_batch(streams: &mut [Self]) {
+    pub fn decode_batch<I: IntoIterator<Item = Q>, Q: DerefMut<Target = Self>>(streams: I) {
+        let mut streams = streams.into_iter().peekable();
+
         // WARN: this may or may not be correct; what happens when [1..] have a different tdc? well, in
         // that case something else is very sus, so let's silently ignore it and hope nobody does that.
-        let tdc = streams[0].tdc.as_ptr();
+        let tdc = streams.peek().unwrap().tdc.as_ptr();
 
         let mut masked: Vec<_> = streams
-            .iter()
             .filter_map(|s| s.is_ready().then_some(s.ptr))
             .collect();
 
